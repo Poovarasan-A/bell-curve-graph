@@ -2,19 +2,82 @@ import {
   LineChart,
   Line,
   XAxis,
-  YAxis,
   Tooltip,
   ResponsiveContainer,
   ReferenceDot,
+  Customized,
 } from "recharts";
 
-const CustomLabel = (props) => {
-  console.log("value of data", props);
+const CustomLabel = ({ xScale, yScale, data }) => {
   return (
-    <text dy={-4} fill={"#000"} fontSize={14} textAnchor="middle">
-      label
-    </text>
+    <g>
+      {data.map((point, index) => {
+        const x = xScale(point.x);
+        const y = yScale(point.y);
+        return (
+          <g key={index}>
+            {/* Draw vertical line */}
+            <line
+              x1={x}
+              y1={y}
+              x2={x}
+              y2={y - 40}
+              stroke="#808080"
+              strokeWidth={2}
+              strokeDasharray="4 4"
+            />
+            {/* Draw label */}
+            <text
+              x={x}
+              y={y - 50}
+              textAnchor="middle"
+              fontSize={14}
+              fill="black"
+              fontWeight={600}
+            >
+              {`$${point.price}`}
+            </text>
+            <text
+              x={x}
+              y={y - 70}
+              textAnchor="middle"
+              fontSize={16}
+              fill="black"
+              fontWeight={600}
+            >
+              {`${point.x}% (${point.count})`}
+            </text>
+          </g>
+        );
+      })}
+    </g>
   );
+};
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const { x, y, price, count } = payload[0].payload;
+
+    return (
+      <div
+        style={{
+          backgroundColor: "white",
+          border: "1px solid #ccc",
+          padding: "10px",
+          borderRadius: "5px",
+          fontSize: "14px",
+          boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        <p style={{ margin: 0, fontWeight: "bold" }}>Percentage: {x}%</p>
+        <p style={{ margin: 0 }}>Properties: {count}</p>
+        <p style={{ margin: 0 }}>Price: $ {price}</p>
+        {/* <p style={{ margin: 0 }}>Y Value: {y}</p> */}
+      </div>
+    );
+  }
+
+  return null; // Return null if tooltip is inactive
 };
 
 const normalizeAndCountPrices = (prices, targetPercentages) => {
@@ -54,10 +117,6 @@ const BellCurveChart = () => {
     647122, 537680, 741150, 531693, 850719, 799564, 409446, 429508, 944859,
     397826,
   ];
-  // Count
-  //price
-  //
-  //   console.log("property prices", prices);
 
   const targetPercentages = [10, 25, 50, 75, 90];
   const normalizedData = normalizeAndCountPrices(prices, targetPercentages);
@@ -70,14 +129,14 @@ const BellCurveChart = () => {
     return { x, y: y.toFixed(5), price: item.price, count: item.count };
   });
 
-  console.log("property datas", data);
+  // console.log("property datas", data);
 
   return (
     <ResponsiveContainer width="80%" height={400}>
       <LineChart
         data={data}
         margin={{
-          top: 30,
+          top: 80,
           right: 50,
           left: 40,
           bottom: 20,
@@ -92,15 +151,7 @@ const BellCurveChart = () => {
             offset: -20,
           }}
         />
-        <YAxis
-          domain={[0, 0.05]}
-          label={{
-            value: "Properties",
-            angle: -90,
-            position: "insideLeft",
-          }}
-        />
-        <Tooltip />
+        <Tooltip content={<CustomTooltip />} cursor={false} />
         <Line
           type="monotone"
           dataKey="y"
@@ -108,7 +159,13 @@ const BellCurveChart = () => {
           stroke="#0071BC"
           strokeWidth={4}
           dot={false}
-          label={<CustomLabel />}
+        />
+        <Customized
+          component={({ xAxisMap, yAxisMap }) => {
+            const xScale = xAxisMap[0].scale;
+            const yScale = yAxisMap[0].scale;
+            return <CustomLabel xScale={xScale} yScale={yScale} data={data} />;
+          }}
         />
         {data.map((point, index) => (
           <ReferenceDot
@@ -118,15 +175,6 @@ const BellCurveChart = () => {
             r={8}
             fill="#0071BC"
             stroke="none"
-            label={{
-              position: "top",
-              value: `
-              ${point.x}%, (${point.count}),
-              $${point.price}`,
-              fill: "black",
-              fontSize: 14,
-              fontWeight: 600,
-            }}
           />
         ))}
       </LineChart>
